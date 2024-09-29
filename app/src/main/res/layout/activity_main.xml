@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <!-- Title of the App -->
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="Translation Application"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout2" />
+
+    <!-- Spinner Section for Language Selection -->
+    <LinearLayout
+        android:id="@+id/linearLayout2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/textView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Spinner for Source Language -->
+        <Spinner
+            android:id="@+id/source_language_spinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/spinner_bg" />
+
+        <!-- Button to swap the languages -->
+        <ImageButton
+            android:id="@+id/button_swap_languages"
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:backgroundTint="@color/primaryColor"
+            android:src="@drawable/ic_swap"
+            android:textColor="@color/white"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Spinner for Target Language -->
+        <Spinner
+            android:id="@+id/target_language_spinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/spinner_bg" />
+    </LinearLayout>
+
+    <!-- EditText for Input -->
+    <EditText
+        android:id="@+id/editText_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Nhập văn bản để dịch"
+        android:inputType="text"
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@id/linearLayout2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ImageButton
+        android:id="@+id/button_speak_input"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="336dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Speak Input"
+        android:src="@drawable/ic_speaker"
+        app:layout_constraintEnd_toEndOf="@id/editText_input"
+        app:layout_constraintTop_toBottomOf="@id/editText_input" />
+
+    <Button
+        android:id="@+id/button_translate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Dịch"
+        android:padding="12dp"
+        android:backgroundTint="@color/primaryColor"
+        android:textColor="@color/white"
+        app:layout_constraintTop_toBottomOf="@id/editText_input"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <EditText
+        android:id="@+id/editText_translationResult"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Kết quả dịch sẽ hiển thị ở đây"
+        android:textColor="@color/black"
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@id/button_translate"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ImageButton
+        android:id="@+id/button_speak_result"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="336dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Speak Result"
+
+        android:src="@drawable/ic_speaker"
+        app:layout_constraintEnd_toEndOf="@id/editText_translationResult"
+        app:layout_constraintTop_toBottomOf="@id/editText_translationResult" />
+
+    <ImageButton
+        android:id="@+id/button_copy_result"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Copy Result"
+        android:src="@drawable/ic_copy"
+        app:layout_constraintEnd_toEndOf="@id/editText_translationResult"
+        app:layout_constraintTop_toBottomOf="@id/editText_translationResult" />
+
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/editText_translationResult">
+
+        <ImageButton
+            android:id="@+id/button_voice_translation"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Voice Translation"
+            android:src="@drawable/ic_microphone" />
+
+        <ImageButton
+            android:id="@+id/button_upload_image"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="30dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Upload Image"
+            android:src="@drawable/ic_upload" />
+
+
+        <ImageButton
+            android:id="@+id/button_take_picture"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="30dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Take Picture"
+            android:src="@drawable/ic_camera" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/button_start_floating_window"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bật Cửa Sổ Nổi"
+        android:padding="12dp"
+        android:layout_marginTop="24dp"
+        android:backgroundTint="@color/primaryColor"
+        android:textColor="@color/white"
+        app:layout_constraintTop_toBottomOf="@id/linearLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

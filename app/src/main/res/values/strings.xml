@@ -1,0 +1,17 @@
+<resources>
+<string name="app_name">TranslationApp</string>
+
+<string-array name="languages_array">
+    <item>Phát hiện ngôn ngữ</item>
+    <item>Vietnamese</item>
+    <item>English</item>
+    <item>Spanish</item>
+    <item>French</item>
+    <item>German</item>
+    <item>Hindi</item>
+    <item>Chinese</item>
+    <item>Japanese</item>
+    <item>Russian</item>
+    <item>Korean</item>
+</string-array>
+</resources>
