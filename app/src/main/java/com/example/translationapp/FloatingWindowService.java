@@ -1,16 +1,36 @@
 package com.example.translationapp;
 
+import static android.app.Activity.RESULT_CANCELED;
+import static android.app.Activity.RESULT_OK;
+import static androidx.core.app.ActivityCompat.startActivityForResult;
+
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
+import android.media.Image;
+import android.media.ImageReader;
+import android.media.projection.MediaProjection;
+import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.provider.MediaStore;
-import android.speech.tts.TextToSpeech;
+import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -23,6 +43,11 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechSynthesizer;
@@ -30,7 +55,10 @@ import com.microsoft.cognitiveservices.speech.SpeechSynthesisResult;
 import com.microsoft.cognitiveservices.speech.SpeechSynthesisCancellationDetails;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,82 +66,167 @@ public class FloatingWindowService extends Service {
 
     private WindowManager windowManager;
     private View floatingView;
+    private TriangleView triangleView;
+    private RectangleSelectionView rectangleSelectionView;
     private EditText editTextTranslationResult;
     private EditText editText;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Spinner sourceLanguageSpinner, targetLanguageSpinner;
     private Map<String, String> languageCodeMap;
     private String selectedSourceLanguage, selectedTargetLanguage;
-
     private SpeechConfig speechConfig;
     private SpeechSynthesizer speechSynthesizer;
 
+    private MediaProjectionManager mediaProjectionManager;
+    private MediaProjection mediaProjection;
+    private VirtualDisplay virtualDisplay;
+
+    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onCreate() {
         super.onCreate();
+        mediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        createTriangleView();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            registerReceiver(screenshotReceiver, new IntentFilter("com.example.ACTION_SCREENSHOT"), Context.RECEIVER_NOT_EXPORTED);
+        }
+    }
+//    -------------- End of onCreate() -------------------
+//    -------------- End of onCreate() -------------------
+//    -------------- End of onCreate() -------------------
+//    -------------- End of onCreate() -------------------
 
-        floatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_window, null);
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent == null || intent.getAction() == null) {
+            Log.e("FloatingWindowService", "Intent hoặc Action là null");
+            return START_STICKY;
+        }
+        startForegroundServiceWithNotification();
+        if ("ACTION_SCREENSHOT".equals(intent.getAction())) {
+            int resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
+            Intent data = intent.getParcelableExtra("data");
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                // Nhận được quyền từ Activity
+                mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+                startVirtualDisplay(); // Bắt đầu tạo Virtual Display để chụp màn hình
+            }
+        }
 
-        // Initialize UI elements
-        editTextTranslationResult = floatingView.findViewById(R.id.textView_result);
+        return START_STICKY;
+    }
+
+    private void startForegroundServiceWithNotification() {
+        String channelId = "screenshot_channel_id";
+        String channelName = "Screenshot Service";
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId,
+                    channelName,
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            manager.createNotificationChannel(channel);
+        }
+
+        Notification notification = new NotificationCompat.Builder(this, channelId)
+                .setContentTitle("Floating Window Service")
+                .setContentText("Service đang chạy để chụp màn hình.")
+                .setSmallIcon(R.drawable.ic_translate)  // Bạn cần thêm icon phù hợp vào project của mình
+                .build();
+
+        startForeground(1, notification);
+    }
+
+    private void startVirtualDisplay() {
+        if (mediaProjection == null) {
+            return;
+        }
+
+        // Thiết lập Virtual Display
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int screenWidth = metrics.widthPixels;
+        int screenHeight = metrics.heightPixels;
+        int screenDensity = metrics.densityDpi;
+
+        ImageReader imageReader = ImageReader.newInstance(screenWidth, screenHeight, PixelFormat.RGBA_8888, 2);
+        virtualDisplay = mediaProjection.createVirtualDisplay(
+                "ScreenCapture",
+                screenWidth, screenHeight, screenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader.getSurface(), null, null
+        );
+
+        imageReader.setOnImageAvailableListener(reader -> {
+            Image image = reader.acquireLatestImage();
+            if (image != null) {
+                Image.Plane[] planes = image.getPlanes();
+                if (planes.length > 0) {
+                    ByteBuffer buffer = planes[0].getBuffer();
+                    int width = image.getWidth();
+                    int height = image.getHeight();
+                    Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                    bitmap.copyPixelsFromBuffer(buffer);
+                    image.close();
+
+                    // Lấy tọa độ từ RectangleSelectionView
+                    float startX = rectangleSelectionView.getStartX();
+                    float startY = rectangleSelectionView.getStartY();
+                    float endX = rectangleSelectionView.getEndX();
+                    float endY = rectangleSelectionView.getEndY();
+
+                    // Cắt ảnh dựa trên tọa độ đã vẽ
+                    Bitmap croppedBitmap = cropBitmap(bitmap, startX, startY, endX, endY);
+                    processOCR(croppedBitmap);
+                }
+            }
+        }, handler);
+    }
+
+
+    @SuppressLint("InflateParams")
+    private void expandFloatingWindow() {
+        if (floatingView == null) {
+            // Nếu cửa sổ nổi chưa tồn tại, tạo mới
+            createFloatingWindow();
+        } else if (floatingView.getParent() == null) {
+            // Nếu cửa sổ nổi đã tồn tại nhưng chưa được thêm vào WindowManager, thêm nó vào
+            windowManager.addView(floatingView, floatingView.getLayoutParams());
+            setupFloatingWindowControls(); // Cài đặt lại các điều khiển nếu cần thiết
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void minimizeFloatingWindow() {
+        if (floatingView != null && floatingView.getParent() != null) {
+            windowManager.removeView(floatingView);
+        }
+        createTriangleView();
+    }
+
+
+
+    private void setupFloatingWindowControls() {
         editText = floatingView.findViewById(R.id.editText_input);
+        editTextTranslationResult = floatingView.findViewById(R.id.textView_result);
         Button closeButton = floatingView.findViewById(R.id.close_button);
         Button translateButton = floatingView.findViewById(R.id.button_translate);
-        Button voiceButton = floatingView.findViewById(R.id.button_voice_translation);
-        Button uploadButton = floatingView.findViewById(R.id.button_upload_image);
-        Button takePictureButton = floatingView.findViewById(R.id.button_take_picture);
         Button copyButton = floatingView.findViewById(R.id.button_copy_result);
         Button speakButton = floatingView.findViewById(R.id.button_speak_result);
         Button buttonSwapLanguages = floatingView.findViewById(R.id.button_swap_languages);
         sourceLanguageSpinner = floatingView.findViewById(R.id.source_language_spinner);
         targetLanguageSpinner = floatingView.findViewById(R.id.target_language_spinner);
 
-        // Setup language spinners and map
         initializeLanguageCodeMap();
+
         setupLanguageSpinners();
 
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                700,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                PixelFormat.TRANSLUCENT
-        );
+        closeButton.setOnClickListener(view -> minimizeFloatingWindow());
 
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.x = 0;
-        params.y = 100;
-
-        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        windowManager.addView(floatingView, params);
-
-        floatingView.setOnTouchListener(new View.OnTouchListener() {
-            private int initialX;
-            private int initialY;
-            private float initialTouchX;
-            private float initialTouchY;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        initialX = params.x;
-                        initialY = params.y;
-                        initialTouchX = event.getRawX();
-                        initialTouchY = event.getRawY();
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        params.x = initialX + (int) (event.getRawX() - initialTouchX);
-                        params.y = initialY + (int) (event.getRawY() - initialTouchY);
-                        windowManager.updateViewLayout(floatingView, params);
-                        return true;
-                }
-                return false;
-            }
-        });
-
-        closeButton.setOnClickListener(view -> stopSelf());
         buttonSwapLanguages.setOnClickListener(v-> swapLanguages());
+
         translateButton.setOnClickListener(view -> {
             String textToTranslate = editText.getText().toString().trim();
             if (!textToTranslate.isEmpty()) {
@@ -123,23 +236,6 @@ public class FloatingWindowService extends Service {
             }
         });
 
-        voiceButton.setOnClickListener(view -> {
-            Toast.makeText(this, "Voice translation feature coming soon!", Toast.LENGTH_SHORT).show();
-        });
-
-        uploadButton.setOnClickListener(view -> {
-            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        });
-
-        takePictureButton.setOnClickListener(view -> {
-            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        });
-
-        // Handle copy button functionality
         copyButton.setOnClickListener(view -> {
             String textToCopy = editTextTranslationResult.getText().toString();
             ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -158,8 +254,251 @@ public class FloatingWindowService extends Service {
                 Toast.makeText(this, "No text to speak", Toast.LENGTH_SHORT).show();
             }
         });
-
     }
+
+    private void createFloatingWindow() {
+        if (floatingView != null) {
+            Toast.makeText(this, "FloatingWindow have been created", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        floatingView = LayoutInflater.from(this).inflate(R.layout.layout_floating_window, null);
+
+        WindowManager.LayoutParams expandedParams = new WindowManager.LayoutParams(
+                700,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                PixelFormat.TRANSLUCENT
+        );
+
+        expandedParams.gravity = Gravity.TOP | Gravity.START;
+        expandedParams.x = 0;
+        expandedParams.y = 100;
+
+        windowManager.addView(floatingView, expandedParams);
+
+        floatingView.setOnTouchListener(new View.OnTouchListener() {
+            private int initialX;
+            private int initialY;
+            private float initialTouchX;
+            private float initialTouchY;
+
+            @SuppressLint("ClickableViewAccessibility")
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = expandedParams.x;
+                        initialY = expandedParams.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        expandedParams.x = initialX + (int) (event.getRawX() - initialTouchX);
+                        expandedParams.y = initialY + (int) (event.getRawY() - initialTouchY);
+                        windowManager.updateViewLayout(floatingView, expandedParams);
+                        return true;
+                }
+                return false;
+            }
+        });
+        setupFloatingWindowControls();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void createTriangleView() {
+        if(triangleView != null){
+            windowManager.removeView(triangleView);
+        }
+        try {
+
+            triangleView = new TriangleView(this);
+            triangleView.setOnActivationChangeListener(isActivated -> {
+                if (isActivated) {
+                    startRectangleSelection();
+                }
+            });
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    100, 100,
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                    PixelFormat.TRANSLUCENT
+            );
+            params.gravity = Gravity.TOP | Gravity.START;
+            params.x = 300;
+            params.y = 800;
+
+            windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            windowManager.addView(triangleView, params);
+
+            triangleView.setOnTouchListener(new View.OnTouchListener() {
+                private int initialX, initialY;
+                private float initialTouchX, initialTouchY;
+
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()) {
+                        case MotionEvent.ACTION_DOWN:
+                            initialX = params.x;
+                            initialY = params.y;
+                            initialTouchX = event.getRawX();
+                            initialTouchY = event.getRawY();
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            if (!triangleView.isActivated()) {
+                                params.x = initialX + (int) (event.getRawX() - initialTouchX);
+                                params.y = initialY + (int) (event.getRawY() - initialTouchY);
+                                windowManager.updateViewLayout(triangleView, params);
+                            }
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            if(!triangleView.isActivated() && Math.abs(event.getRawX() - initialTouchX) < 10 && Math.abs(event.getRawY() - initialTouchY) < 10){
+                                triangleView.toggleActivation();
+                            }
+                            // Kích hoạt chế độ vẽ hình chữ nhật khi nhấn vào tam giác sau khi đã đặt nó ở vị trí mong muốn
+                            if (triangleView.isActivated()) {
+                                startRectangleSelection();
+                            }
+                            return true;
+                    }
+                    return false;
+                }
+            });
+
+        } catch (Exception e) {
+            Log.e("FloatingWindowService", "Error adding TriangleView: " + e.getMessage());
+        }
+    }
+
+
+
+    private void startRectangleSelection() {
+        rectangleSelectionView = new RectangleSelectionView(this);
+        rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
+            // Yêu cầu quyền chụp màn hình thông qua ScreenshotRequestActivity
+            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(screenshotIntent);
+            // Lưu trữ tọa độ đã vẽ để cắt sau khi chụp màn hình
+            rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
+        });
+
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                PixelFormat.TRANSLUCENT
+        );
+        windowManager.addView(rectangleSelectionView, params);
+    }
+
+    private final BroadcastReceiver screenshotReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("com.example.ACTION_SCREENSHOT".equals(intent.getAction())) {
+                int resultCode = intent.getIntExtra("resultCode", RESULT_CANCELED);
+                Intent data = intent.getParcelableExtra("data");
+                if (resultCode == RESULT_OK && data != null) {
+                    mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+                    Bitmap screenshot = takeScreenshot();
+                    if (screenshot != null) {
+                        // Sử dụng tọa độ đã vẽ từ RectangleSelectionView
+                        float startX = rectangleSelectionView.getStartX();
+                        float startY = rectangleSelectionView.getStartY();
+                        float endX = rectangleSelectionView.getEndX();
+                        float endY = rectangleSelectionView.getEndY();
+                        Bitmap cropped = cropBitmap(screenshot, startX, startY, endX, endY);
+                        processOCR(cropped);
+                    }
+                }
+            }
+        }
+    };
+
+    private Bitmap takeScreenshot() {
+        if (mediaProjection == null) {
+            Log.e("FloatingWindowService", "MediaProjection is null, cannot take screenshot.");
+            return null;
+        }
+
+        // Thiết lập các thuộc tính cho VirtualDisplay
+        int width = getResources().getDisplayMetrics().widthPixels;
+        int height = getResources().getDisplayMetrics().heightPixels;
+        int density = getResources().getDisplayMetrics().densityDpi;
+
+        // Tạo ImageReader để lấy ảnh màn hình
+        ImageReader imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 1);
+        virtualDisplay = mediaProjection.createVirtualDisplay("Screenshot",
+                width, height, density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader.getSurface(), null, null);
+
+        Image image = null;
+        Bitmap bitmap = null;
+
+        try {
+            // Đợi cho đến khi ImageReader có thể nhận hình ảnh
+            image = imageReader.acquireLatestImage();
+            if (image != null) {
+                Image.Plane[] planes = image.getPlanes();
+                ByteBuffer buffer = planes[0].getBuffer();
+                int pixelStride = planes[0].getPixelStride();
+                int rowStride = planes[0].getRowStride();
+                int rowPadding = rowStride - pixelStride * width;
+
+                // Tạo bitmap từ dữ liệu của Image
+                bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888);
+                bitmap.copyPixelsFromBuffer(buffer);
+            }
+        } catch (Exception e) {
+            Log.e("FloatingWindowService", "Error taking screenshot: " + e.getMessage());
+        } finally {
+            if (image != null) {
+                image.close();
+            }
+            if (imageReader != null) {
+                imageReader.close();
+            }
+            if (virtualDisplay != null) {
+                virtualDisplay.release();
+            }
+        }
+
+        return bitmap;
+    }
+
+    private Bitmap cropBitmap(Bitmap screenshot, float startX, float startY, float endX, float endY) {
+        int width = (int) (endX - startX);
+        int height = (int) (endY - startY);
+
+        if (width <= 0 || height <= 0) {
+            Log.e("FloatingWindowService", "Invalid crop dimensions: width=" + width + ", height=" + height);
+            return null;
+        }
+
+        return Bitmap.createBitmap(screenshot, (int) startX, (int) startY, width, height);
+    }
+
+    private void processOCR(Bitmap croppedBitmap) {
+        InputImage image = InputImage.fromBitmap(croppedBitmap, 0);
+        TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        recognizer.process(image)
+                .addOnSuccessListener(text -> showOCRResult(text.getText()))
+                .addOnFailureListener(e -> Log.e("OCR", "Failed: " + e.getMessage()));
+    }
+
+    private void showOCRResult(String recognizedText) {
+        handler.post(() -> {
+            expandFloatingWindow();
+            if (editText != null) editText.setText(recognizedText);
+        });
+    }
+
+//------------ Translating part -------------------
+// ------------ Translating part -------------------
+//------------ Translating part -------------------
+// ------------ Translating part -------------------
 
     private void translateText(String text) {
         TranslatorService.translateText(text, selectedSourceLanguage, selectedTargetLanguage, new TranslatorService.TranslationCallback() {
@@ -174,18 +513,16 @@ public class FloatingWindowService extends Service {
             }
         });
     }
+
     private void swapLanguages() {
         int sourcePosition = sourceLanguageSpinner.getSelectedItemPosition();
         int targetPosition = targetLanguageSpinner.getSelectedItemPosition();
 
-        // Check if sourcePosition is 0 (Phát hiện ngôn ngữ) and handle it separately
         if (sourcePosition == 0) {
-            // If "Phát hiện ngôn ngữ" is selected in the source spinner, we cannot swap with target language
             Toast.makeText(this, "Không thể đổi với 'Phát hiện ngôn ngữ'", Toast.LENGTH_SHORT).show();
         } else {
-            // Swap the positions between source and target, adjusting the positions accordingly
-            sourceLanguageSpinner.setSelection(targetPosition + 1); // Add 1 to account for the extra option in the source spinner
-            targetLanguageSpinner.setSelection(sourcePosition - 1); // Subtract 1 to match the target spinner without "Phát hiện ngôn ngữ"
+            sourceLanguageSpinner.setSelection(targetPosition + 1);
+            targetLanguageSpinner.setSelection(sourcePosition - 1);
         }
     }
     private void setupLanguageSpinners() {
@@ -203,7 +540,6 @@ public class FloatingWindowService extends Service {
         targetAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         targetLanguageSpinner.setAdapter(targetAdapter);
 
-        // Set listener to update selected language
         sourceLanguageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -224,11 +560,10 @@ public class FloatingWindowService extends Service {
             public void onNothingSelected(AdapterView<?> parent) { }
         });
     }
+
     private void speakTextWithAzure(String text, String languageCode) {
-        // Initialize SpeechConfig with subscription and region
         speechConfig = SpeechConfig.fromSubscription(Constants.AZURE_TRANSLATOR_SUBSCRIPTION_KEY, Constants.AZURE_TRANSLATOR_REGION);
 
-        // Get the correct Azure voice name based on languageCode
         String azureVoiceName = getAzureVoiceFromLanguageCode(languageCode);
 
         if (azureVoiceName != null) {
@@ -251,6 +586,7 @@ public class FloatingWindowService extends Service {
             Toast.makeText(this, "Ngôn ngữ không hợp lệ", Toast.LENGTH_SHORT).show();
         }
     }
+
     private String getAzureVoiceFromLanguageCode(String languageCode) {
         switch (languageCode) {
             case "en":
@@ -300,6 +636,12 @@ public class FloatingWindowService extends Service {
         if (speechSynthesizer != null) {
             speechSynthesizer.close();
         }
+        if (triangleView != null) windowManager.removeView(triangleView);
+        if (rectangleSelectionView != null) windowManager.removeView(rectangleSelectionView);
+        if (screenshotReceiver != null) {
+            unregisterReceiver(screenshotReceiver);
+        }
+        Log.d("FloatingWindowService", "Service destroyed");
     }
 
     @Nullable

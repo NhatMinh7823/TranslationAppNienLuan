@@ -108,53 +108,54 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView_result" />
 
-    <LinearLayout
-        android:id="@+id/linearLayout3"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button_speak_result">
+<!--    <LinearLayout-->
+<!--        android:id="@+id/linearLayout3"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginTop="16dp"-->
+<!--        android:gravity="center"-->
+<!--        android:orientation="horizontal"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintHorizontal_bias="0.0"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toBottomOf="@+id/button_speak_result">-->
 
-        <!-- Voice Translation Button -->
-        <Button
-            android:id="@+id/button_voice_translation"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:drawableTop="@drawable/ic_microphone"
-            android:src="@drawable/ic_microphone" />
+<!--        &lt;!&ndash; Voice Translation Button &ndash;&gt;-->
+<!--        <Button-->
+<!--            android:id="@+id/button_voice_translation"-->
+<!--            android:layout_width="50dp"-->
+<!--            android:layout_height="50dp"-->
+<!--            android:drawableTop="@drawable/ic_microphone"-->
+<!--            android:src="@drawable/ic_microphone" />-->
 
-        <!-- Upload Image Button -->
-        <Button
-            android:id="@+id/button_upload_image"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="30dp"
-            android:drawableTop="@drawable/ic_upload"
-            android:src="@drawable/ic_upload" />
+<!--        &lt;!&ndash; Upload Image Button &ndash;&gt;-->
+<!--        <Button-->
+<!--            android:id="@+id/button_upload_image"-->
+<!--            android:layout_width="50dp"-->
+<!--            android:layout_height="50dp"-->
+<!--            android:layout_marginStart="30dp"-->
+<!--            android:drawableTop="@drawable/ic_upload"-->
+<!--            android:src="@drawable/ic_upload" />-->
 
-        <!-- Take Picture Button -->
-        <Button
-            android:id="@+id/button_take_picture"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="30dp"
-            android:drawableTop="@drawable/ic_camera"
-            android:src="@drawable/ic_camera" />
-    </LinearLayout>
+<!--        &lt;!&ndash; Take Picture Button &ndash;&gt;-->
+<!--        <Button-->
+<!--            android:id="@+id/button_take_picture"-->
+<!--            android:layout_width="50dp"-->
+<!--            android:layout_height="50dp"-->
+<!--            android:layout_marginStart="30dp"-->
+<!--            android:drawableTop="@drawable/ic_camera"-->
+<!--            android:src="@drawable/ic_camera" />-->
+<!--    </LinearLayout>-->
 
     <Button
         android:id="@+id/close_button"
         android:layout_width="40dp"
         android:layout_height="40dp"
+        android:layout_marginTop="4dp"
         android:drawableTop="@drawable/ic_close"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintHorizontal_bias="0.512"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout3" />
+        app:layout_constraintTop_toBottomOf="@+id/textView_result" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

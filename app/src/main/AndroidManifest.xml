@@ -9,13 +9,25 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
 
     <application
         android:allowBackup="true"
@@ -28,41 +40,37 @@
         android:theme="@style/Theme.TranslationApp"
         tools:targetApi="31">
 
-
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-
-            >
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-
         <activity
             android:name=".CameraActivity"
-            android:label="Camera Activity"
-            >
-        </activity>
-
-
+            android:label="Camera Activity" />
         <activity
             android:name=".VoiceActivity"
-            android:label="Voice Activity"
-            >
-        </activity>
-
+            android:label="Voice Activity" />
         <activity
             android:name=".GalleryActivity"
-            android:label="Gallery Activity"
-            >
-        </activity>
-        <service android:name=".FloatingWindowService"
-            android:exported="false"/>
+            android:label="Gallery Activity" />
+
+        <service
+            android:name=".FloatingWindowService"
+            android:foregroundServiceType="mediaProjection"
+            android:permission="android.permission.FOREGROUND_SERVICE"
+            android:exported="false">
+        </service>
+
+        <activity android:name=".ScreenshotRequestActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
+            android:exported="false" />
+
+
     </application>
 
 </manifest>
-
-

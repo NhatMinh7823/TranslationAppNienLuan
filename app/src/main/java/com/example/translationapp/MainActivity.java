@@ -5,7 +5,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.ArrayAdapter;
@@ -34,9 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityResultLauncher<Intent> overlayPermissionLauncher;
 
     private Spinner sourceLanguageSpinner, targetLanguageSpinner;
-    private Button buttonTranslate;
 
-    private SpeechConfig speechConfig;
     private SpeechSynthesizer speechSynthesizer;
 
     // Language map to store language codes corresponding to spinner values
@@ -53,22 +50,22 @@ public class MainActivity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     // Check if overlay permission is granted after returning from settings
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (Settings.canDrawOverlays(MainActivity.this)) {
-                            // Start the floating window service if permission is granted
-                            startFloatingWindowService();
-                        } else {
-                            // Permission denied, show a message
-                            Toast.makeText(this, "Quyền vẽ trên ứng dụng khác không được cấp!", Toast.LENGTH_SHORT).show();
-                        }
+                    if (Settings.canDrawOverlays(MainActivity.this)) {
+                        // Start the floating window service if permission is granted
+                        startFloatingWindowService();
+                    } else {
+                        // Permission denied, show a message
+                        Toast.makeText(this, "Quyền vẽ trên ứng dụng khác không được cấp!", Toast.LENGTH_SHORT).show();
                     }
                 }
         );
-
+        setUpUI();
+    }
+    private void setUpUI(){
         // Initialize UI elements
         editTextInput = findViewById(R.id.editText_input);
         editTextTranslationResult = findViewById(R.id.editText_translationResult);
-        buttonTranslate = findViewById(R.id.button_translate);
+        Button buttonTranslate = findViewById(R.id.button_translate);
         ImageButton buttonVoiceTranslation = findViewById(R.id.button_voice_translation);
         ImageButton buttonUploadImage = findViewById(R.id.button_upload_image);
         ImageButton buttonTakePicture = findViewById(R.id.button_take_picture);
@@ -141,16 +138,14 @@ public class MainActivity extends AppCompatActivity {
         Button startFloatingWindowButton = findViewById(R.id.button_start_floating_window);
         startFloatingWindowButton.setOnClickListener(v -> {
             // Check if overlay permission is granted
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (!Settings.canDrawOverlays(MainActivity.this)) {
-                    // If permission is not granted, request it
-                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            Uri.parse("package:" + getPackageName()));
-                    overlayPermissionLauncher.launch(intent);  // Use the launcher to start the permission intent
-                } else {
-                    // If permission is already granted, start the floating window service
-                    startFloatingWindowService();
-                }
+            if (!Settings.canDrawOverlays(MainActivity.this)) {
+                // If permission is not granted, request it
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                overlayPermissionLauncher.launch(intent);  // Use the launcher to start the permission intent
+            } else {
+                // If permission is already granted, start the floating window service
+                startFloatingWindowService();
             }
         });
 
@@ -168,11 +163,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
     // Method to speak the given text
     private void speakTextWithAzure(String text, String languageCode) {
         // Initialize SpeechConfig with subscription and region
-        speechConfig = SpeechConfig.fromSubscription(Constants.AZURE_TRANSLATOR_SUBSCRIPTION_KEY, Constants.AZURE_TRANSLATOR_REGION);
+        SpeechConfig speechConfig = SpeechConfig.fromSubscription(Constants.AZURE_TRANSLATOR_SUBSCRIPTION_KEY, Constants.AZURE_TRANSLATOR_REGION);
 
         // Get the correct Azure voice name based on languageCode
         String azureVoiceName = getAzureVoiceFromLanguageCode(languageCode);
