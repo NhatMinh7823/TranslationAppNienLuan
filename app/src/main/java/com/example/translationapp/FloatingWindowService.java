@@ -2,14 +2,12 @@ package com.example.translationapp;
 
 import static android.app.Activity.RESULT_CANCELED;
 import static android.app.Activity.RESULT_OK;
-import static androidx.core.app.ActivityCompat.startActivityForResult;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -80,6 +78,7 @@ public class FloatingWindowService extends Service {
     private MediaProjectionManager mediaProjectionManager;
     private MediaProjection mediaProjection;
     private VirtualDisplay virtualDisplay;
+    private boolean isCaptureInProgress = false;
 
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @SuppressLint("ClickableViewAccessibility")
@@ -141,11 +140,14 @@ public class FloatingWindowService extends Service {
     }
 
     private void startVirtualDisplay() {
-        if (mediaProjection == null) {
+        if (mediaProjection == null || isCaptureInProgress) {
             return;
         }
 
-        // Thiết lập Virtual Display
+        // Mark the capture as in progress
+        isCaptureInProgress = true;
+
+        // Setup Virtual Display
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         int screenWidth = metrics.widthPixels;
         int screenHeight = metrics.heightPixels;
@@ -159,32 +161,34 @@ public class FloatingWindowService extends Service {
                 imageReader.getSurface(), null, null
         );
 
+        // Listener for ImageReader
         imageReader.setOnImageAvailableListener(reader -> {
-            Image image = reader.acquireLatestImage();
-            if (image != null) {
-                Image.Plane[] planes = image.getPlanes();
-                if (planes.length > 0) {
-                    ByteBuffer buffer = planes[0].getBuffer();
-                    int width = image.getWidth();
-                    int height = image.getHeight();
-                    Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                    bitmap.copyPixelsFromBuffer(buffer);
-                    image.close();
+            if (isCaptureInProgress) {
+                Image image = reader.acquireLatestImage();
+                if (image != null) {
+                    Image.Plane[] planes = image.getPlanes();
+                    if (planes.length > 0) {
+                        ByteBuffer buffer = planes[0].getBuffer();
+                        int width = image.getWidth();
+                        int height = image.getHeight();
+                        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                        bitmap.copyPixelsFromBuffer(buffer);
+                        image.close();
 
-                    // Lấy tọa độ từ RectangleSelectionView
-                    float startX = rectangleSelectionView.getStartX();
-                    float startY = rectangleSelectionView.getStartY();
-                    float endX = rectangleSelectionView.getEndX();
-                    float endY = rectangleSelectionView.getEndY();
+                        // Get coordinates from RectangleSelectionView
+                        float startX = rectangleSelectionView.getStartX();
+                        float startY = rectangleSelectionView.getStartY();
+                        float endX = rectangleSelectionView.getEndX();
+                        float endY = rectangleSelectionView.getEndY();
 
-                    // Cắt ảnh dựa trên tọa độ đã vẽ
-                    Bitmap croppedBitmap = cropBitmap(bitmap, startX, startY, endX, endY);
-                    processOCR(croppedBitmap);
+                        // Crop the captured bitmap based on the drawn rectangle
+                        Bitmap croppedBitmap = cropBitmap(bitmap, startX, startY, endX, endY);
+                        processOCR(croppedBitmap);  // OCR processing and reset state after completion
+                    }
                 }
             }
         }, handler);
     }
-
 
     @SuppressLint("InflateParams")
     private void expandFloatingWindow() {
@@ -373,25 +377,60 @@ public class FloatingWindowService extends Service {
 
 
 
+//    private void startRectangleSelection() {
+//        if (rectangleSelectionView != null && rectangleSelectionView.getParent() != null) {
+//            windowManager.removeView(rectangleSelectionView);
+//        }
+//
+//        rectangleSelectionView = new RectangleSelectionView(this);
+//        rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
+//            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+//            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//            startActivity(screenshotIntent);
+//            rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
+//        });
+//
+//        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+//                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+//                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
+//                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+//                PixelFormat.TRANSLUCENT
+//        );
+//
+//        params.gravity = Gravity.TOP | Gravity.START;
+//
+//        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+//        windowManager.addView(rectangleSelectionView, params);
+//    }
+
     private void startRectangleSelection() {
+        if (rectangleSelectionView != null && rectangleSelectionView.getParent() != null) {
+            windowManager.removeView(rectangleSelectionView);
+        }
+
         rectangleSelectionView = new RectangleSelectionView(this);
         rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
-            // Yêu cầu quyền chụp màn hình thông qua ScreenshotRequestActivity
             Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
-            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+
             startActivity(screenshotIntent);
-            // Lưu trữ tọa độ đã vẽ để cắt sau khi chụp màn hình
             rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
         });
 
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT
         );
+
+        params.gravity = Gravity.TOP | Gravity.START;
+
+        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         windowManager.addView(rectangleSelectionView, params);
     }
+
+
 
     private final BroadcastReceiver screenshotReceiver = new BroadcastReceiver() {
         @Override
@@ -480,12 +519,45 @@ public class FloatingWindowService extends Service {
         return Bitmap.createBitmap(screenshot, (int) startX, (int) startY, width, height);
     }
 
+//    private void processOCR(Bitmap croppedBitmap) {
+//        InputImage image = InputImage.fromBitmap(croppedBitmap, 0);
+//        TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+//        recognizer.process(image)
+//                .addOnSuccessListener(text -> showOCRResult(text.getText()))
+//                .addOnFailureListener(e -> Log.e("OCR", "Failed: " + e.getMessage()));
+//    }
+
     private void processOCR(Bitmap croppedBitmap) {
         InputImage image = InputImage.fromBitmap(croppedBitmap, 0);
         TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
         recognizer.process(image)
-                .addOnSuccessListener(text -> showOCRResult(text.getText()))
-                .addOnFailureListener(e -> Log.e("OCR", "Failed: " + e.getMessage()));
+                .addOnSuccessListener(text -> {
+                    // Show OCR result and reset state
+                    showOCRResult(text.getText());
+                    exitRectangleDrawingMode();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("OCR", "Failed: " + e.getMessage());
+                    resetCaptureState(); // Reset flag on failure too
+                });
+    }
+
+    private void resetCaptureState() {
+        isCaptureInProgress = false; // Allow new captures
+        // Release resources related to virtual display if needed
+        if (virtualDisplay != null) {
+            virtualDisplay.release();
+            virtualDisplay = null;
+        }
+    }
+
+    private void exitRectangleDrawingMode() {
+        // Ensure the RectangleSelectionView is removed from the screen
+        if (rectangleSelectionView != null && rectangleSelectionView.getParent() != null) {
+            windowManager.removeView(rectangleSelectionView);
+        }
+        // Reset the drawing state or disable any listeners if needed
+        isCaptureInProgress = false; // Reset capture flag to allow future captures if needed
     }
 
     private void showOCRResult(String recognizedText) {
@@ -495,8 +567,6 @@ public class FloatingWindowService extends Service {
         });
     }
 
-//------------ Translating part -------------------
-// ------------ Translating part -------------------
 //------------ Translating part -------------------
 // ------------ Translating part -------------------
 
