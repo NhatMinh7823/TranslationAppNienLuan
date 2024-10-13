@@ -10,7 +10,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 public class TriangleView extends View {
-
+    private OnActivationChangeListener onActivationChangeListener;
     private Paint paint;
     private boolean isActivated = false; // Trạng thái kích hoạt
 
@@ -54,19 +54,6 @@ public class TriangleView extends View {
                     }
                 }
                 return true;
-            case MotionEvent.ACTION_MOVE:
-                if (!isActivated) {
-                    // Di chuyển tam giác đi
-                    setX(event.getRawX() - getWidth() / 2);
-                    setY(event.getRawY() - getHeight() / 2);
-                }
-                return true;
-            case MotionEvent.ACTION_UP:
-                if (!isActivated) {
-                    // Kích hoạt tam giác
-                    toggleActivation();
-                }
-                return true;
         }
         return super.onTouchEvent(event);
     }
@@ -74,21 +61,15 @@ public class TriangleView extends View {
     void toggleActivation() {
         isActivated = !isActivated;
         if (isActivated) {
-            paint.setColor(Color.GREEN); // Khi kích hoạt thì đổi sang màu xanh
+            paint.setColor(Color.BLUE); // Khi kích hoạt thì đổi sang màu xanh
         } else {
             paint.setColor(Color.RED); // Khi không kích hoạt thì đổi về màu đỏ
         }
-        invalidate(); // Vẽ lại tam giác với màu mới
+        invalidate();
     }
 
     public boolean isActivated() {
         return isActivated;
-    }
-
-    private OnActivationChangeListener onActivationChangeListener;
-
-    public void setOnActivationChangeListener(OnActivationChangeListener listener) {
-        this.onActivationChangeListener = listener;
     }
 
     public interface OnActivationChangeListener {

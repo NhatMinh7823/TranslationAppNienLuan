@@ -317,12 +317,6 @@ public class FloatingWindowService extends Service {
         try {
 
             triangleView = new TriangleView(this);
-            triangleView.setOnActivationChangeListener(isActivated -> {
-                if (isActivated) {
-                    startRectangleSelection();
-                }
-            });
-
             WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                     100, 100,
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
@@ -412,7 +406,7 @@ public class FloatingWindowService extends Service {
         rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
             Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
             screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
             startActivity(screenshotIntent);
             rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
         });
