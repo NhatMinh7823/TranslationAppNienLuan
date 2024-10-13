@@ -497,8 +497,6 @@ public class FloatingWindowService extends Service {
 
 //------------ Translating part -------------------
 // ------------ Translating part -------------------
-//------------ Translating part -------------------
-// ------------ Translating part -------------------
 
     private void translateText(String text) {
         TranslatorService.translateText(text, selectedSourceLanguage, selectedTargetLanguage, new TranslatorService.TranslationCallback() {
