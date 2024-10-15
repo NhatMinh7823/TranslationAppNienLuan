@@ -557,7 +557,13 @@ public class FloatingWindowService extends Service {
     private void showOCRResult(String recognizedText) {
         handler.post(() -> {
             expandFloatingWindow();
-            if (editText != null) editText.setText(recognizedText);
+            if (editText != null) {
+                editText.setText(recognizedText);
+                String textToTranslate = editText.getText().toString().trim();
+                if (!textToTranslate.isEmpty()) {
+                    translateText(textToTranslate);
+                }
+            }
         });
     }
 
