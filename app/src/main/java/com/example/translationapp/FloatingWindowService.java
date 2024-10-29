@@ -104,12 +104,17 @@ public class FloatingWindowService extends Service {
         }
         startForegroundServiceWithNotification();
         if ("ACTION_SCREENSHOT".equals(intent.getAction())) {
-            int resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
-            Intent data = intent.getParcelableExtra("data");
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                // Nhận được quyền từ Activity
-                mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-                startVirtualDisplay(); // Bắt đầu tạo Virtual Display để chụp màn hình
+            if (mediaProjection == null) {
+                int resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
+                Intent data = intent.getParcelableExtra("data");
+                if (resultCode == Activity.RESULT_OK && data != null) {
+                    // Nhận được quyền từ Activity
+                    mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+                    startVirtualDisplay(); // Bắt đầu tạo Virtual Display để chụp màn hình
+                }
+            } else {
+                // Nếu đã có mediaProjection, bắt đầu ngay việc chụp màn hình
+                startVirtualDisplay();
             }
         }
 
@@ -193,7 +198,6 @@ public class FloatingWindowService extends Service {
     @SuppressLint("InflateParams")
     private void expandFloatingWindow() {
         if (floatingView == null) {
-            // Nếu cửa sổ nổi chưa tồn tại, tạo mới
             createFloatingWindow();
         } else if (floatingView.getParent() == null) {
             // Nếu cửa sổ nổi đã tồn tại nhưng chưa được thêm vào WindowManager, thêm nó vào
@@ -207,10 +211,9 @@ public class FloatingWindowService extends Service {
         if (floatingView != null && floatingView.getParent() != null) {
             windowManager.removeView(floatingView);
         }
-        createTriangleView();
+//        createTriangleView();
+//        triangleView.toggleActivation();
     }
-
-
 
     private void setupFloatingWindowControls() {
         editText = floatingView.findViewById(R.id.editText_input);
@@ -351,7 +354,7 @@ public class FloatingWindowService extends Service {
                             }
                             return true;
                         case MotionEvent.ACTION_UP:
-                            if(!triangleView.isActivated() && Math.abs(event.getRawX() - initialTouchX) < 10 && Math.abs(event.getRawY() - initialTouchY) < 10){
+                            if(Math.abs(event.getRawX() - initialTouchX) < 10 && Math.abs(event.getRawY() - initialTouchY) < 10){
                                 triangleView.toggleActivation();
                             }
                             // Kích hoạt chế độ vẽ hình chữ nhật khi nhấn vào tam giác sau khi đã đặt nó ở vị trí mong muốn
@@ -368,34 +371,6 @@ public class FloatingWindowService extends Service {
             Log.e("FloatingWindowService", "Error adding TriangleView: " + e.getMessage());
         }
     }
-
-
-
-//    private void startRectangleSelection() {
-//        if (rectangleSelectionView != null && rectangleSelectionView.getParent() != null) {
-//            windowManager.removeView(rectangleSelectionView);
-//        }
-//
-//        rectangleSelectionView = new RectangleSelectionView(this);
-//        rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
-//            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
-//            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//            startActivity(screenshotIntent);
-//            rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
-//        });
-//
-//        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-//                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-//                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE,
-//                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-//                PixelFormat.TRANSLUCENT
-//        );
-//
-//        params.gravity = Gravity.TOP | Gravity.START;
-//
-//        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-//        windowManager.addView(rectangleSelectionView, params);
-//    }
 
     private void startRectangleSelection() {
         if (rectangleSelectionView != null && rectangleSelectionView.getParent() != null) {
@@ -430,10 +405,6 @@ public class FloatingWindowService extends Service {
         @Override
         public void onReceive(Context context, Intent intent) {
             if ("com.example.ACTION_SCREENSHOT".equals(intent.getAction())) {
-                int resultCode = intent.getIntExtra("resultCode", RESULT_CANCELED);
-                Intent data = intent.getParcelableExtra("data");
-                if (resultCode == RESULT_OK && data != null) {
-                    mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
                     Bitmap screenshot = takeScreenshot();
                     if (screenshot != null) {
                         // Sử dụng tọa độ đã vẽ từ RectangleSelectionView
@@ -444,7 +415,6 @@ public class FloatingWindowService extends Service {
                         Bitmap cropped = cropBitmap(screenshot, startX, startY, endX, endY);
                         processOCR(cropped);
                     }
-                }
             }
         }
     };
@@ -454,7 +424,6 @@ public class FloatingWindowService extends Service {
             Log.e("FloatingWindowService", "MediaProjection is null, cannot take screenshot.");
             return null;
         }
-
         // Thiết lập các thuộc tính cho VirtualDisplay
         int width = getResources().getDisplayMetrics().widthPixels;
         int height = getResources().getDisplayMetrics().heightPixels;
@@ -490,12 +459,10 @@ public class FloatingWindowService extends Service {
             if (image != null) {
                 image.close();
             }
-            if (imageReader != null) {
-                imageReader.close();
-            }
-            if (virtualDisplay != null) {
-                virtualDisplay.release();
-            }
+            imageReader.close();
+            //            if (virtualDisplay != null) {
+//                virtualDisplay.release();
+//            }
         }
 
         return bitmap;
@@ -536,6 +503,19 @@ public class FloatingWindowService extends Service {
                 });
     }
 
+    private void showOCRResult(String recognizedText) {
+        handler.post(() -> {
+            expandFloatingWindow();
+            if (editText != null) {
+                editText.setText(recognizedText);
+                String textToTranslate = editText.getText().toString().trim();
+                if (!textToTranslate.isEmpty()) {
+                    translateText(textToTranslate);
+                }
+            }
+            triangleView.toggleActivation();
+        });
+    }
     private void resetCaptureState() {
         isCaptureInProgress = false; // Allow new captures
         // Release resources related to virtual display if needed
@@ -554,18 +534,7 @@ public class FloatingWindowService extends Service {
         isCaptureInProgress = false; // Reset capture flag to allow future captures if needed
     }
 
-    private void showOCRResult(String recognizedText) {
-        handler.post(() -> {
-            expandFloatingWindow();
-            if (editText != null) {
-                editText.setText(recognizedText);
-                String textToTranslate = editText.getText().toString().trim();
-                if (!textToTranslate.isEmpty()) {
-                    translateText(textToTranslate);
-                }
-            }
-        });
-    }
+
 
 //------------ Translating part -------------------
 // ------------ Translating part -------------------
@@ -708,8 +677,13 @@ public class FloatingWindowService extends Service {
         }
         if (triangleView != null) windowManager.removeView(triangleView);
         if (rectangleSelectionView != null) windowManager.removeView(rectangleSelectionView);
-        if (screenshotReceiver != null) {
-            unregisterReceiver(screenshotReceiver);
+        unregisterReceiver(screenshotReceiver);
+        if (mediaProjection != null) {
+            mediaProjection.stop();
+            mediaProjection = null; // Hủy mediaProjection khi dịch vụ bị hủy
+        }
+        if (virtualDisplay != null) {
+                virtualDisplay.release();
         }
         Log.d("FloatingWindowService", "Service destroyed");
     }

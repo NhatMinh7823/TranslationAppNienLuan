@@ -20,10 +20,10 @@ public class RectangleSelectionView extends View {
         init();
     }
 
-    public RectangleSelectionView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init();
-    }
+//    public RectangleSelectionView(Context context, AttributeSet attrs) {
+//        super(context, attrs);
+//        init();
+//    }
 
     private void init() {
         paint = new Paint();
