@@ -10,33 +10,6 @@
     android:padding="10dp">
 
     <!-- Source Language Spinner -->
-    <Spinner
-        android:id="@+id/source_language_spinner"
-        android:layout_width="105dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:background="@drawable/spinner_bg"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/button_swap_languages"
-        android:layout_width="45dp"
-        android:layout_height="45dp"
-        android:layout_weight="1"
-        android:drawableTop="@drawable/ic_swap"
-        app:layout_constraintEnd_toStartOf="@+id/target_language_spinner"
-        app:layout_constraintStart_toEndOf="@+id/source_language_spinner"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Spinner
-        android:id="@+id/target_language_spinner"
-        android:layout_width="105dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:background="@drawable/spinner_bg"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- EditText for input text -->
     <!-- Button to trigger translation -->
@@ -47,7 +20,9 @@
         android:id="@+id/scrollView2"
         android:layout_width="match_parent"
         android:layout_height="120dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button_swap_languages">
 
@@ -63,23 +38,45 @@
             app:layout_constraintTop_toBottomOf="@+id/target_language_spinner" />
     </ScrollView>
 
+    <Spinner
+        android:id="@+id/target_language_spinner"
+        android:layout_width="105dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="60dp"
+        android:layout_weight="1"
+        android:background="@drawable/spinner_bg"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <Button
         android:id="@+id/button_translate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:text="Dịch"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/scrollView2" />
 
-    <!-- Copy button to copy translation result -->
-
+    <Button
+        android:id="@+id/button_swap_languages"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="40dp"
+        android:layout_weight="1"
+        android:drawableTop="@drawable/ic_swap_black"
+        app:layout_constraintEnd_toStartOf="@+id/target_language_spinner"
+        app:layout_constraintHorizontal_bias="0.428"
+        app:layout_constraintStart_toEndOf="@+id/source_language_spinner"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="120dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/button_translate">
 
@@ -89,9 +86,23 @@
             android:layout_height="wrap_content"
             android:hint="Kết quả dịch sẽ hiển thị ở đây"
             android:padding="10dp"
-            android:textSize="14sp"
-            android:textColor="@color/black" />
+            android:textColor="@color/black"
+            android:textSize="14sp" />
     </ScrollView>
+
+    <Spinner
+        android:id="@+id/source_language_spinner"
+        android:layout_width="105dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="60dp"
+        android:layout_weight="1"
+        android:background="@drawable/spinner_bg"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Copy button to copy translation result -->
+
 
     <Button
         android:id="@+id/button_copy_result"
@@ -156,5 +167,17 @@
         app:layout_constraintEnd_toStartOf="@+id/button_copy_result"
         app:layout_constraintStart_toEndOf="@+id/button_speak_result"
         app:layout_constraintTop_toBottomOf="@+id/scrollView" />
+
+    <Button
+        android:id="@+id/stop_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:drawableTop="@drawable/ic_stop"
+        app:layout_constraintBottom_toTopOf="@+id/button_swap_languages"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

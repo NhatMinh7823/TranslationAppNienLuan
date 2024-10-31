@@ -1,17 +1,13 @@
 package com.example.translationapp;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Path;
+import android.graphics.PorterDuff;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
-import android.view.View;
 
-public class TriangleView extends View {
+public class TriangleView extends androidx.appcompat.widget.AppCompatImageView {
     private OnActivationChangeListener onActivationChangeListener;
-    private Paint paint;
     private boolean isActivated = false; // Trạng thái kích hoạt
 
     public TriangleView(Context context) {
@@ -25,23 +21,10 @@ public class TriangleView extends View {
     }
 
     private void init() {
-        paint = new Paint();
-        paint.setColor(Color.RED); // Màu mặc định của tam giác
-        paint.setStyle(Paint.Style.FILL);
+        setImageResource(R.drawable.ic_screen_shot); // Đặt tên icon theo drawable của bạn
+        setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN);
     }
 
-    @Override
-    protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
-        Path path = new Path();
-        int width = getWidth();
-        int height = getHeight();
-        path.moveTo((float) width / 2, 0);
-        path.lineTo(0, height);
-        path.lineTo(width, height);
-        path.close();
-        canvas.drawPath(path, paint);
-    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -57,16 +40,15 @@ public class TriangleView extends View {
         }
         return super.onTouchEvent(event);
     }
-
-    void toggleActivation() {
-        isActivated = !isActivated;
-        if (isActivated) {
-            paint.setColor(Color.BLUE); // Khi kích hoạt thì đổi sang màu xanh
-        } else {
-            paint.setColor(Color.RED); // Khi không kích hoạt thì đổi về màu đỏ
-        }
-        invalidate();
+void toggleActivation() {
+    isActivated = !isActivated;
+    if (isActivated) {
+        setColorFilter(Color.BLUE, PorterDuff.Mode.SRC_IN); // Khi kích hoạt thì đổi sang màu xanh
+    } else {
+        setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN); // Khi không kích hoạt thì đổi về màu đỏ
     }
+    invalidate();
+}
 
     public boolean isActivated() {
         return isActivated;

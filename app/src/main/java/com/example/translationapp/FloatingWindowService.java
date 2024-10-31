@@ -5,14 +5,12 @@ import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -51,7 +49,6 @@ import com.microsoft.cognitiveservices.speech.SpeechSynthesisCancellationDetails
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -138,72 +135,6 @@ public class FloatingWindowService extends Service {
         startForeground(1, notification);
     }
 
-//    private void startVirtualDisplay() {
-//        if (mediaProjection == null || isCaptureInProgress) {
-//            return;
-//        }
-//        isCaptureInProgress = true;
-//
-//        DisplayMetrics metrics = getResources().getDisplayMetrics();
-//        int screenWidth = metrics.widthPixels;
-//        int screenHeight = metrics.heightPixels;
-//        int screenDensity = metrics.densityDpi;
-//
-//        ImageReader imageReader = ImageReader.newInstance(screenWidth, screenHeight, PixelFormat.RGBA_8888, 2);
-//        virtualDisplay = mediaProjection.createVirtualDisplay(
-//                "ScreenCapture",
-//                screenWidth, screenHeight, screenDensity,
-//                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-//                imageReader.getSurface(), null, null
-//        );
-//
-//        imageReader.setOnImageAvailableListener(reader -> {
-//            if (isCaptureInProgress) {
-//                Image image = reader.acquireLatestImage();
-//                if (image != null) {
-//                    Image.Plane[] planes = image.getPlanes();
-//                    if (planes.length > 0) {
-//                        ByteBuffer buffer = planes[0].getBuffer();
-//                        int width = image.getWidth();
-//                        int height = image.getHeight();
-//                        Bitmap screenShot = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-//                        screenShot.copyPixelsFromBuffer(buffer);
-//                        image.close();
-//
-//                        float startX = rectangleSelectionView.getStartX();
-//                        float startY = rectangleSelectionView.getStartY();
-//                        float endX = rectangleSelectionView.getEndX();
-//                        float endY = rectangleSelectionView.getEndY();
-//
-//                        int width_Cropped = Math.round((endX - startX));
-//                        int height_Cropped =Math.round((endY - startY));
-//                        if(width_Cropped <= 0 || height_Cropped <= 0){
-//                            float tempX = startX;
-//                            float tempY = startY;
-//                            startX = endX;
-//                            startY = endY;
-//                            endX = tempX;
-//                            endY = tempY;
-//                            width_Cropped = Math.round((endX - startX));
-//                            height_Cropped = Math.round((endY - startY));
-//                        }
-//
-//                        final int MIN_SIZE = 35;
-//
-//                        if (width_Cropped < MIN_SIZE || height_Cropped < MIN_SIZE) {
-//                            showTooSmallMessage();
-//                            exitRectangleDrawingMode();
-//                        } else{
-//                            // Crop the captured screenShot based on the drawn rectangle
-//                            Bitmap croppedBitmap = cropBitmap(screenShot, startX, startY, endX, endY);
-//                            processOCR(croppedBitmap);  // OCR processing and reset state after completion
-//                        }
-//                    }
-//                }
-//            }
-//        }, handler);
-//    }
-
     private void startVirtualDisplay() {
         if (mediaProjection == null || isCaptureInProgress) {
             return;
@@ -245,7 +176,6 @@ public class FloatingWindowService extends Service {
         }, handler);
     }
 
-
     private void showTooSmallMessage() {
         handler.post(() -> {
             expandFloatingWindow();
@@ -278,6 +208,7 @@ public class FloatingWindowService extends Service {
         editText = floatingView.findViewById(R.id.editText_input);
         editTextTranslationResult = floatingView.findViewById(R.id.textView_result);
         Button closeButton = floatingView.findViewById(R.id.close_button);
+        Button stopButton = floatingView.findViewById(R.id.stop_button);
         Button translateButton = floatingView.findViewById(R.id.button_translate);
         Button copyButton = floatingView.findViewById(R.id.button_copy_result);
         Button speakButton = floatingView.findViewById(R.id.button_speak_result);
@@ -290,7 +221,7 @@ public class FloatingWindowService extends Service {
         setupLanguageSpinners();
 
         closeButton.setOnClickListener(view -> minimizeFloatingWindow());
-
+        stopButton.setOnClickListener(view -> stopService());
         buttonSwapLanguages.setOnClickListener(v-> swapLanguages());
 
         translateButton.setOnClickListener(view -> {
@@ -371,6 +302,34 @@ public class FloatingWindowService extends Service {
         setupFloatingWindowControls();
     }
 
+    public void stopService() {
+        // Xóa floatingView nếu nó đang được hiển thị
+        if (floatingView != null && floatingView.getParent() != null) {
+            windowManager.removeView(floatingView);
+            floatingView = null;
+        }
+
+        // Xóa rectangleSelectionView nếu nó đang được hiển thị
+        if (rectangleSelectionView != null && rectangleSelectionView.getParent() != null) {
+            windowManager.removeView(rectangleSelectionView);
+            rectangleSelectionView = null;
+        }
+
+        // Dừng MediaProjection và hủy VirtualDisplay nếu đang hoạt động
+        if (mediaProjection != null) {
+            if (virtualDisplay != null) {
+                virtualDisplay.release();
+                virtualDisplay = null;
+            }
+            mediaProjection.stop();
+            mediaProjection = null;
+        }
+
+        // Dừng dịch vụ và giải phóng các tài nguyên khác nếu cần
+        isCaptureInProgress = false;
+        stopForeground(true); // Dừng chế độ foreground của service nếu có
+        stopSelf(); // Dừng chính dịch vụ này
+    }
     @SuppressLint("ClickableViewAccessibility")
     private void createTriangleView() {
         if(triangleView != null){
@@ -471,20 +430,20 @@ public class FloatingWindowService extends Service {
 
         // Đảm bảo tọa độ hợp lệ
         if (width <= 0 || height <= 0) {
-                            float tempX = startX;
-                            float tempY = startY;
-                            startX = endX;
-                            startY = endY;
-                            endX = tempX;
-                            endY = tempY;
+            float tempX = startX;
+            float tempY = startY;
+            startX = endX;
+            startY = endY;
+            endX = tempX;
+            endY = tempY;
             width = Math.round((endX - startX));
             height = Math.round((endY - startY));
         }
-                        final int MIN_SIZE = 35;
+        final int MIN_SIZE = 35;
 
-                        if (width < MIN_SIZE || height < MIN_SIZE) {
-                            return null;
-                        }
+        if (width < MIN_SIZE || height < MIN_SIZE) {
+            return null;
+        }
         // Lấy các dữ liệu từ Image
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
@@ -496,35 +455,6 @@ public class FloatingWindowService extends Service {
         // Cắt phần ảnh HCN
         return Bitmap.createBitmap(fullBitmap, Math.round(startX), Math.round(startY + 35), width, height);
     }
-
-//    private Bitmap cropBitmapUsingMatrix(Bitmap originalBitmap, float startX, float startY, float endX, float endY) {
-//        // Tạo một matrix mới
-//        Matrix matrix = new Matrix();
-//
-//        // Đặt scale (tỷ lệ) nếu kích thước bitmap khác kích thước của view
-//        float scaleX = (float) originalBitmap.getWidth() / rectangleSelectionView.getWidth();
-//        float scaleY = (float) originalBitmap.getHeight() / rectangleSelectionView.getHeight();
-//        matrix.setScale(scaleX, scaleY);
-//
-//        // Chuyển đổi tọa độ start và end theo scale
-//        float[] points = {startX, startY, endX, endY};
-//        matrix.mapPoints(points);
-//
-//        int cropStartX = Math.round(points[0]);
-//        int cropStartY = Math.round(points[1]);
-//        int cropWidth = Math.round(points[2] - points[0]);
-//        int cropHeight = Math.round(points[3] - points[1]);
-//
-//        // Đảm bảo không vượt quá giới hạn của bitmap
-//        cropStartX = Math.max(0, Math.min(cropStartX, originalBitmap.getWidth()));
-//        cropStartY = Math.max(0, Math.min(cropStartY, originalBitmap.getHeight()));
-//        cropWidth = Math.min(cropWidth, originalBitmap.getWidth() - cropStartX);
-//        cropHeight = Math.min(cropHeight, originalBitmap.getHeight() - cropStartY);
-//
-//        // Cắt ảnh
-//        return Bitmap.createBitmap(originalBitmap, cropStartX, cropStartY, cropWidth, cropHeight);
-//    }
-
 
     private void processOCR(Bitmap croppedBitmap) {
         InputImage image = InputImage.fromBitmap(croppedBitmap, 0);
