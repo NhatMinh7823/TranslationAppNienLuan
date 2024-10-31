@@ -12,6 +12,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -234,6 +235,9 @@ public class FloatingWindowService extends Service {
                     Bitmap croppedBitmap = cropImageDirectly(image);
                     if (croppedBitmap != null) {
                         processOCR(croppedBitmap);
+                    } else{
+                        showTooSmallMessage();
+                        exitRectangleDrawingMode();
                     }
                     image.close();
                 }
@@ -454,19 +458,12 @@ public class FloatingWindowService extends Service {
         windowManager.addView(rectangleSelectionView, params);
     }
 
-//    private Bitmap cropBitmap(Bitmap screenshot, float startX, float startY, float endX, float endY) {
-//        int width = (int)(endX - startX);
-//        int height =(int)((endY - startY));
-//
-//        return Bitmap.createBitmap(screenshot, Math.round(startX), (Math.round(startY))-20, width, height);
-//    }
-
     private Bitmap cropImageDirectly(Image image) {
         // Lấy tọa độ vùng chọn
         float startX = rectangleSelectionView.getStartX();
-        float startY = rectangleSelectionView.getStartY() + 35;
+        float startY = rectangleSelectionView.getStartY();
         float endX = rectangleSelectionView.getEndX();
-//        float endY = rectangleSelectionView.getEndY() + (float)10/100*rectangleSelectionView.getEndY();
+        float endY = rectangleSelectionView.getEndY() ;
 
         // Chuyển đổi tọa độ sang kích thước ảnh thật nếu cần
         int width = Math.round(endX - startX);
@@ -474,9 +471,20 @@ public class FloatingWindowService extends Service {
 
         // Đảm bảo tọa độ hợp lệ
         if (width <= 0 || height <= 0) {
-            return null;
+                            float tempX = startX;
+                            float tempY = startY;
+                            startX = endX;
+                            startY = endY;
+                            endX = tempX;
+                            endY = tempY;
+            width = Math.round((endX - startX));
+            height = Math.round((endY - startY));
         }
+                        final int MIN_SIZE = 35;
 
+                        if (width < MIN_SIZE || height < MIN_SIZE) {
+                            return null;
+                        }
         // Lấy các dữ liệu từ Image
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
@@ -486,8 +494,36 @@ public class FloatingWindowService extends Service {
         fullBitmap.copyPixelsFromBuffer(buffer);
 
         // Cắt phần ảnh HCN
-        return Bitmap.createBitmap(fullBitmap, Math.round(startX), Math.round(startY), width, height);
+        return Bitmap.createBitmap(fullBitmap, Math.round(startX), Math.round(startY + 35), width, height);
     }
+
+//    private Bitmap cropBitmapUsingMatrix(Bitmap originalBitmap, float startX, float startY, float endX, float endY) {
+//        // Tạo một matrix mới
+//        Matrix matrix = new Matrix();
+//
+//        // Đặt scale (tỷ lệ) nếu kích thước bitmap khác kích thước của view
+//        float scaleX = (float) originalBitmap.getWidth() / rectangleSelectionView.getWidth();
+//        float scaleY = (float) originalBitmap.getHeight() / rectangleSelectionView.getHeight();
+//        matrix.setScale(scaleX, scaleY);
+//
+//        // Chuyển đổi tọa độ start và end theo scale
+//        float[] points = {startX, startY, endX, endY};
+//        matrix.mapPoints(points);
+//
+//        int cropStartX = Math.round(points[0]);
+//        int cropStartY = Math.round(points[1]);
+//        int cropWidth = Math.round(points[2] - points[0]);
+//        int cropHeight = Math.round(points[3] - points[1]);
+//
+//        // Đảm bảo không vượt quá giới hạn của bitmap
+//        cropStartX = Math.max(0, Math.min(cropStartX, originalBitmap.getWidth()));
+//        cropStartY = Math.max(0, Math.min(cropStartY, originalBitmap.getHeight()));
+//        cropWidth = Math.min(cropWidth, originalBitmap.getWidth() - cropStartX);
+//        cropHeight = Math.min(cropHeight, originalBitmap.getHeight() - cropStartY);
+//
+//        // Cắt ảnh
+//        return Bitmap.createBitmap(originalBitmap, cropStartX, cropStartY, cropWidth, cropHeight);
+//    }
 
 
     private void processOCR(Bitmap croppedBitmap) {
