@@ -81,6 +81,14 @@ public class FloatingWindowService extends Service {
     public void onCreate() {
         super.onCreate();
         mediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+
+        if (mediaProjection == null) {
+            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+            startActivity(screenshotIntent);
+        }
+
         createTriangleView();
     }
 //    -------------- End of onCreate() -------------------
@@ -103,11 +111,8 @@ public class FloatingWindowService extends Service {
                 if (resultCode == Activity.RESULT_OK && data != null) {
                     // Nhận được quyền từ Activity
                     mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-                    startVirtualDisplay(); // Bắt đầu tạo Virtual Display để chụp màn hình
+//                    startVirtualDisplay();
                 }
-            } else {
-                // Nếu đã có mediaProjection, bắt đầu ngay việc chụp màn hình
-                startVirtualDisplay();
             }
         }
 
@@ -413,10 +418,19 @@ public class FloatingWindowService extends Service {
 
         rectangleSelectionView = new RectangleSelectionView(this);
         rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
-            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
-            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
-            startActivity(screenshotIntent);
+//            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+//            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+//            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+//            startActivity(screenshotIntent);
+
+            if (mediaProjection != null) {
+                startVirtualDisplay();
+            } else {
+                Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+                screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+                startActivity(screenshotIntent);
+            }
             rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
         });
 
