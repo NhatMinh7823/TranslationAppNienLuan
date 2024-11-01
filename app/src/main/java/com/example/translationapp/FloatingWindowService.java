@@ -73,13 +73,20 @@ public class FloatingWindowService extends Service {
     private MediaProjection mediaProjection;
     private VirtualDisplay virtualDisplay;
     private boolean isCaptureInProgress = false;
-
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void onCreate() {
         super.onCreate();
         mediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+
+        if (mediaProjection == null) {
+            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+            startActivity(screenshotIntent);
+        }
+
         createTriangleView();
     }
 //    -------------- End of onCreate() -------------------
@@ -100,13 +107,8 @@ public class FloatingWindowService extends Service {
                 int resultCode = intent.getIntExtra("resultCode", Activity.RESULT_CANCELED);
                 Intent data = intent.getParcelableExtra("data");
                 if (resultCode == Activity.RESULT_OK && data != null) {
-                    // Nhận được quyền từ Activity
                     mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
-                    startVirtualDisplay(); // Bắt đầu tạo Virtual Display để chụp màn hình
                 }
-            } else {
-                // Nếu đã có mediaProjection, bắt đầu ngay việc chụp màn hình
-                startVirtualDisplay();
             }
         }
 
@@ -212,6 +214,7 @@ public class FloatingWindowService extends Service {
         Button translateButton = floatingView.findViewById(R.id.button_translate);
         Button copyButton = floatingView.findViewById(R.id.button_copy_result);
         Button speakButton = floatingView.findViewById(R.id.button_speak_result);
+        Button speakButton_src = floatingView.findViewById(R.id.button_speak_src);
         Button buttonSwapLanguages = floatingView.findViewById(R.id.button_swap_languages);
         sourceLanguageSpinner = floatingView.findViewById(R.id.source_language_spinner);
         targetLanguageSpinner = floatingView.findViewById(R.id.target_language_spinner);
@@ -247,6 +250,17 @@ public class FloatingWindowService extends Service {
 
             if (!text.isEmpty()) {
                 speakTextWithAzure(text, targetLanguage);
+            } else {
+                Toast.makeText(this, "No text to speak", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        speakButton_src.setOnClickListener(v -> {
+            String text = editText.getText().toString();
+            String srcLanguage = languageCodeMap.get(sourceLanguageSpinner.getSelectedItem().toString());
+
+            if (!text.isEmpty()) {
+                speakTextWithAzure(text, srcLanguage);
             } else {
                 Toast.makeText(this, "No text to speak", Toast.LENGTH_SHORT).show();
             }
@@ -397,10 +411,14 @@ public class FloatingWindowService extends Service {
 
         rectangleSelectionView = new RectangleSelectionView(this);
         rectangleSelectionView.setOnRectangleDrawnListener((startX, startY, endX, endY) -> {
-            Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
-            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
-            screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
-            startActivity(screenshotIntent);
+            if (mediaProjection != null) {
+                startVirtualDisplay();
+            } else {
+                Intent screenshotIntent = new Intent(this, ScreenshotRequestActivity.class);
+                screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+                screenshotIntent.addFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION);
+                startActivity(screenshotIntent);
+            }
             rectangleSelectionView.setStartEndCoordinates(startX, startY, endX, endY);
         });
 
@@ -575,13 +593,10 @@ public class FloatingWindowService extends Service {
         if (azureVoiceName != null) {
             // Set the voice name for the speech synthesizer
             speechConfig.setSpeechSynthesisVoiceName(azureVoiceName);
-
-            // Now create the speech synthesizer after setting voice name
+            //create the speech synthesizer after setting voice name
             speechSynthesizer = new SpeechSynthesizer(speechConfig);
-
             // Speak the text
             SpeechSynthesisResult result = speechSynthesizer.SpeakText(text);
-
             // Check if synthesis was canceled
             if (result.getReason() == ResultReason.Canceled) {
                 SpeechSynthesisCancellationDetails cancellationDetails = SpeechSynthesisCancellationDetails.fromResult(result);

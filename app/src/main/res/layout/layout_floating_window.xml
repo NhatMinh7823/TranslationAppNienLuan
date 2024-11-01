@@ -160,6 +160,14 @@
     <!--    </LinearLayout>-->
 
     <Button
+        android:id="@+id/button_speak_src"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:drawableTop="@drawable/ic_speaker"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/scrollView2" />
+
+    <Button
         android:id="@+id/close_button"
         android:layout_width="40dp"
         android:layout_height="40dp"
