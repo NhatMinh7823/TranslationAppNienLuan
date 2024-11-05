@@ -1,6 +1,5 @@
 package com.example.translationapp;
 
-import android.util.Log;
 
 import okhttp3.*;
 import org.json.JSONArray;
@@ -8,7 +7,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.Objects;
 
 public class TranslatorService {
 
@@ -45,7 +43,7 @@ public class TranslatorService {
                     @Override
                     public void onFailure(Call call, IOException e) {
                         e.printStackTrace();
-                        callback.onFailure(e.getMessage());
+                        callback.onFailure(e.getMessage() + "Xin hãy thử lại lần nữa ");
                     }
 
                     @Override
@@ -65,14 +63,14 @@ public class TranslatorService {
                                 callback.onFailure("JSON parsing error: " + e.getMessage());
                             }
                         } else {
-                            callback.onFailure(response.message());
+                            callback.onFailure(response.message() + "Xin hãy thử lại lần nữa ");
                         }
                     }
                 });
 
             } catch (Exception e) {
                 e.printStackTrace();
-                callback.onFailure(e.getMessage());
+                callback.onFailure(e.getMessage() + "Xin hãy thử lại lần nữa ");
             }
     }
 

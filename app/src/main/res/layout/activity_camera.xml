@@ -7,52 +7,153 @@
     android:layout_height="match_parent"
     tools:context=".CameraActivity">
 
-
-    <androidx.camera.view.PreviewView
-        android:id="@+id/camera_preview"
+    <!-- Camera Preview with added elevation for a Material look -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_image_preview"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1"
-        app:layout_constraintHeight_default="percent"
-        app:layout_constraintHeight_percent="0.5"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-
-    <ScrollView
-        android:id="@+id/scrollView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:fillViewport="true"
-        app:layout_constraintWidth_default="percent"
-        app:layout_constraintWidth_percent="1"
-        app:layout_constraintHeight_default="percent"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_percent="0.4"
-        app:layout_constraintTop_toBottomOf="@id/camera_preview"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/language_card"
+        app:strokeColor="?attr/colorPrimary"
+        app:strokeWidth="1dp">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/camera_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:elevation="4dp"/>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/language_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/card_image_preview"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:id="@+id/translationResult"
+        <LinearLayout
+            android:id="@+id/linearLayout2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:text="Kết quả dịch sẽ hiển thị ở đây" />
-    </ScrollView>
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="16dp">
 
-    <!-- Nút chụp ảnh chiếm 10% màn hình -->
-    <Button
-        android:id="@+id/button_capture"
-        android:layout_width="wrap_content"
+            <!-- Spinner for Source Language -->
+            <Spinner
+                android:id="@+id/source_language_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="?attr/colorPrimary" />
+
+            <!-- Button to swap the languages -->
+            <ImageButton
+                android:id="@+id/button_swap_languages"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:src="@drawable/ic_swap"
+                android:contentDescription="Swap Languages"
+                app:tint="@color/white" />
+
+            <!-- Spinner for Target Language -->
+            <Spinner
+                android:id="@+id/target_language_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="?attr/colorPrimary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/translation_card"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:text="Chụp Ảnh"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        app:cardElevation="4dp"
+        app:cardCornerRadius="8dp"
+        app:layout_constraintTop_toBottomOf="@id/language_card"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/button_capture_card"
         app:layout_constraintHeight_default="percent"
-        app:layout_constraintHeight_percent="0.1"
+        app:layout_constraintHeight_percent="0.38">
+
+        <ScrollView
+            android:id="@+id/scrollView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fillViewport="true">
+
+            <TextView
+                android:id="@+id/translationResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:text="Kết quả dịch sẽ hiển thị ở đây"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp" />
+        </ScrollView>
+        <ImageButton
+            android:id="@+id/button_copy"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_copy"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="?attr/colorPrimary"
+            android:layout_gravity="end">
+
+        </ImageButton>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Material Button with filled style -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/button_capture_card"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/scrollView" />
+        app:layout_constraintTop_toBottomOf="@id/translation_card"
+        >
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_capture"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="Chụp Ảnh" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <ImageButton
+        android:id="@+id/button_home"
+        android:layout_margin="12dp"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Upload Image"
+        android:src="@drawable/ic_home"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:tint="?attr/colorPrimary" />
 </androidx.constraintlayout.widget.ConstraintLayout>

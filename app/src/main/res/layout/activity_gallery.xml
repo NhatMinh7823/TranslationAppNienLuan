@@ -1,39 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
-<!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
-<!--    xmlns:tools="http://schemas.android.com/tools"-->
-<!--    android:id="@+id/main"-->
-<!--    android:layout_width="match_parent"-->
-<!--    android:layout_height="match_parent"-->
-<!--    tools:context=".GalleryActivity">-->
-<!--    <LinearLayout-->
-<!--        xmlns:android="http://schemas.android.com/apk/res/android"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="match_parent"-->
-<!--        android:orientation="vertical"-->
-<!--        android:padding="16dp">-->
-
-<!--        <Button-->
-<!--            android:id="@+id/button_select_image"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="Chọn Ảnh từ Thư Viện"/>-->
-
-<!--        <ImageView-->
-<!--            android:id="@+id/image_preview"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:contentDescription="Selected Image"/>-->
-
-<!--        <TextView-->
-<!--            android:id="@+id/translationResult"-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="Kết quả dịch sẽ hiển thị ở đây"-->
-<!--            android:paddingTop="20dp"/>-->
-<!--    </LinearLayout>-->
-
-<!--</androidx.constraintlayout.widget.ConstraintLayout>-->
 
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -41,66 +6,149 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp"
     tools:context=".GalleryActivity">
-
-    <!-- Button để chọn ảnh từ thư viện -->
-
-    <!-- ImageView để hiển thị ảnh đã chọn -->
-
-    <Button
-        android:id="@+id/button_select_image"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_select_image"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="28dp"
-
-        android:text="Chọn Ảnh từ Thư Viện"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginBottom="28dp"
+        >
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_select_image"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chọn Ảnh từ Thư Viện"
+            style="@style/Widget.MaterialComponents.Button.TextButton" />
+    </com.google.android.material.card.MaterialCardView>
 
-    <ImageView
-        android:id="@+id/image_preview"
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_image_preview"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginStart="22dp"
-        android:layout_marginEnd="22dp"
-        android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
-        app:layout_constraintBottom_toTopOf="@+id/translationResult"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.5"
+        app:layout_constraintHeight_percent="0.4"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" /> <!-- Chiếm 50% chiều cao màn hình -->
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/language_card"
+        app:strokeColor="?attr/colorPrimary"
+        app:strokeWidth="1dp">
 
-    <!-- TextView để hiển thị kết quả dịch -->
-<!--    <TextView-->
-<!--        android:id="@+id/translationResult"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="0dp"-->
-<!--        android:layout_marginBottom="75dp"-->
-<!--        android:text="Kết quả dịch sẽ hiển thị ở đây"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toBottomOf="@+id/image_preview" />-->
+        <ImageView
+            android:id="@+id/image_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:contentDescription="Preview of selected image"
+            android:scaleType="fitCenter" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/language_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/card_image_preview"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:id="@+id/linearLayout2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <!-- Spinner for Source Language -->
+            <Spinner
+                android:id="@+id/source_language_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="?attr/colorPrimary" />
+
+            <!-- Button to swap the languages -->
+            <ImageButton
+                android:id="@+id/button_swap_languages"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:backgroundTint="?attr/colorPrimary"
+                android:src="@drawable/ic_swap"
+                android:contentDescription="Swap Languages"
+                app:tint="@color/white" />
+
+            <!-- Spinner for Target Language -->
+            <Spinner
+                android:id="@+id/target_language_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:padding="8dp"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="?attr/colorPrimary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/image_preview"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/button_select_image"
+        app:layout_constraintTop_toBottomOf="@+id/language_card"
+        app:layout_constraintBottom_toTopOf="@+id/card_select_image"
         android:fillViewport="true">
 
-        <!-- TextView để hiển thị kết quả dịch -->
-        <TextView
-            android:id="@+id/translationResult"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayout_translationResult"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Kết quả dịch sẽ hiển thị ở đây"
-            android:padding="16dp"/>
+            android:hint="Translation Result"
+            app:boxStrokeColor="@color/design_default_color_primary"
+            app:boxStrokeWidth="1dp"
+            app:endIconDrawable="@drawable/ic_copy"
+            app:endIconTint="?attr/colorPrimary"
+            app:endIconContentDescription="Copy Input Text"
+            app:endIconMode="custom">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/translationResult"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:inputType="textMultiLine"
+                android:gravity="top"
+                android:focusable="false"
+                android:scrollbars="vertical"
+                android:overScrollMode="ifContentScrolls" />
+
+        </com.google.android.material.textfield.TextInputLayout>
 
     </ScrollView>
+    <ImageButton
+        android:id="@+id/button_home"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Upload Image"
+        android:src="@drawable/ic_home"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:tint="?attr/colorPrimary" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,8 +5,9 @@ import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.widget.ImageView;
 
-public class TriangleView extends androidx.appcompat.widget.AppCompatImageView {
+public class TriangleView extends ImageView {
     private OnActivationChangeListener onActivationChangeListener;
     private boolean isActivated = false; // Trạng thái kích hoạt
 

@@ -12,8 +12,6 @@ public class RectangleSelectionView extends View {
     private Paint paint;
     private float startX, startY, endX, endY;
     private boolean isDrawing = false;
-    private long lastDrawTime = 0; // Timestamp for last redraw
-    private static final long DRAW_DELAY = 16; // Delay in ms for approximately 60 FPS
 
     public RectangleSelectionView(Context context) {
         super(context);
@@ -52,13 +50,7 @@ public class RectangleSelectionView extends View {
             case MotionEvent.ACTION_MOVE:
                 endX = event.getX();
                 endY = event.getY();
-
-                // Limit redraw frequency to approximately 60 FPS
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastDrawTime >= DRAW_DELAY) {
-                    invalidate(); // Redraw rectangle
-                    lastDrawTime = currentTime;
-                }
+                invalidate(); // Redraw rectangle
                 break;
 
             case MotionEvent.ACTION_UP:

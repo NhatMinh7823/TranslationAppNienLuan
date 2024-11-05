@@ -1,5 +1,7 @@
 package com.example.translationapp;
 
+import static com.example.translationapp.TranslatorService.translateText;
+
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -7,6 +9,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.speech.RecognizerIntent;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -16,15 +23,19 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.textfield.TextInputLayout;
 import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechSynthesizer;
 import com.microsoft.cognitiveservices.speech.SpeechSynthesisResult;
 import com.microsoft.cognitiveservices.speech.SpeechSynthesisCancellationDetails;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -38,13 +49,13 @@ public class MainActivity extends AppCompatActivity {
 
     // Language map to store language codes corresponding to spinner values
     private Map<String, String> languageCodeMap;
+    private static final int REQUEST_CODE_VOICE = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initializeLanguageCodeMap();
 
         overlayPermissionLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -65,22 +76,19 @@ public class MainActivity extends AppCompatActivity {
         // Initialize UI elements
         editTextInput = findViewById(R.id.editText_input);
         editTextTranslationResult = findViewById(R.id.editText_translationResult);
-        Button buttonTranslate = findViewById(R.id.button_translate);
+
+        TextInputLayout textInputLayout = findViewById(R.id.text_input_layout);
+        TextInputLayout textOutputLayout = findViewById(R.id.text_output_layout);
         ImageButton buttonVoiceTranslation = findViewById(R.id.button_voice_translation);
         ImageButton buttonUploadImage = findViewById(R.id.button_upload_image);
         ImageButton buttonTakePicture = findViewById(R.id.button_take_picture);
         ImageButton buttonSwapLanguages = findViewById(R.id.button_swap_languages);
+        Button startFloatingWindowButton = findViewById(R.id.button_start_floating_window);
         sourceLanguageSpinner = findViewById(R.id.source_language_spinner);
         targetLanguageSpinner = findViewById(R.id.target_language_spinner);
-        ImageButton buttonCopyResult = findViewById(R.id.button_copy_result);
-        ImageButton buttonSpeakInput = findViewById(R.id.button_speak_input);
-        ImageButton buttonSpeakResult = findViewById(R.id.button_speak_result);
 
         // Xử lý sự kiện cho các nút chức năng
-        buttonVoiceTranslation.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, VoiceActivity.class);
-            startActivity(intent);
-        });
+        buttonVoiceTranslation.setOnClickListener(v -> startVoiceRecognition());
 
         buttonUploadImage.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, GalleryActivity.class);
@@ -92,50 +100,47 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Clipboard Manager for copying text
-        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-
-        // Copy button functionality
-        buttonCopyResult.setOnClickListener(v -> {
-            String textToCopy = editTextTranslationResult.getText().toString();
-            if (!textToCopy.isEmpty()) {
-                ClipData clipData = ClipData.newPlainText("Translated Text", textToCopy);
-                clipboardManager.setPrimaryClip(clipData);
-                Toast.makeText(MainActivity.this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(MainActivity.this, "Nothing to copy", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        // Speak input text functionality
-        buttonSpeakInput.setOnClickListener(v -> {
+        textInputLayout.setStartIconOnClickListener(v -> {
             String text = editTextInput.getText().toString();
-            String sourceLanguage = languageCodeMap.get(sourceLanguageSpinner.getSelectedItem().toString());
-
+            String srcLanguage = languageCodeMap.get(sourceLanguageSpinner.getSelectedItem().toString());
             if (!text.isEmpty()) {
-                speakTextWithAzure(text, sourceLanguage);
+                speakTextWithAzure(text, srcLanguage);
             } else {
-                Toast.makeText(MainActivity.this, "No text to speak", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No text to speak", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // Speak translation result functionality
-        buttonSpeakResult.setOnClickListener(v -> {
+        textInputLayout.setEndIconOnClickListener(v -> {
+            String textToCopy = editTextInput.getText().toString();
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Translated Text", textToCopy);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+        });
+
+        textOutputLayout.setStartIconOnClickListener(v -> {
             String text = editTextTranslationResult.getText().toString();
-            String targetLanguage = languageCodeMap.get(targetLanguageSpinner.getSelectedItem().toString());
-
+            String srcLanguage = languageCodeMap.get(targetLanguageSpinner.getSelectedItem().toString());
             if (!text.isEmpty()) {
-                speakTextWithAzure(text, targetLanguage);
+                speakTextWithAzure(text, srcLanguage);
             } else {
-                Toast.makeText(MainActivity.this, "No text to speak", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No text to speak", Toast.LENGTH_SHORT).show();
             }
         });
 
+        textOutputLayout.setEndIconOnClickListener(v -> {
+            String textToCopy = editTextTranslationResult.getText().toString();
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Translated Text", textToCopy);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+        });
+
+        initializeLanguageCodeMap();
         setupLanguageSpinners();
         buttonSwapLanguages.setOnClickListener(v -> swapLanguages());
 
         // Handle start floating window button
-        Button startFloatingWindowButton = findViewById(R.id.button_start_floating_window);
         startFloatingWindowButton.setOnClickListener(v -> {
             // Check if overlay permission is granted
             if (!Settings.canDrawOverlays(MainActivity.this)) {
@@ -149,17 +154,30 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Handle translation button click
-        buttonTranslate.setOnClickListener(v -> {
-            String textToTranslate = editTextInput.getText().toString().trim();
-            if (!textToTranslate.isEmpty()) {
-                String sourceLanguage = sourceLanguageSpinner.getSelectedItem().toString();
-                String targetLanguage = targetLanguageSpinner.getSelectedItem().toString();
-                String sourceLangCode = languageCodeMap.get(sourceLanguage);
-                String targetLangCode = languageCodeMap.get(targetLanguage);
-                translateText(textToTranslate, sourceLangCode, targetLangCode);
-            } else {
-                Toast.makeText(MainActivity.this, "Vui lòng nhập văn bản để dịch", Toast.LENGTH_SHORT).show();
+        editTextInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // No action needed here
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // No action needed here
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String textToTranslate = s.toString().trim();
+                if (!textToTranslate.isEmpty()) {
+                    String sourceLanguage = sourceLanguageSpinner.getSelectedItem().toString();
+                    String targetLanguage = targetLanguageSpinner.getSelectedItem().toString();
+                    String sourceLangCode = languageCodeMap.get(sourceLanguage);
+                    String targetLangCode = languageCodeMap.get(targetLanguage);
+                    translateText(textToTranslate, sourceLangCode, targetLangCode);
+                }  else {
+                    // Clear the translation result if input is empty
+                    editTextTranslationResult.setText("");
+                }
             }
         });
     }
@@ -235,6 +253,22 @@ public class MainActivity extends AppCompatActivity {
                 android.R.layout.simple_spinner_item, filteredTargetLanguages);
         targetAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         targetLanguageSpinner.setAdapter(targetAdapter);
+
+        targetLanguageSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedTargetLanguage = languageCodeMap.get(targetLanguageSpinner.getSelectedItem().toString());
+                String selectedSourceLanguage = languageCodeMap.get(sourceLanguageSpinner.getSelectedItem().toString());
+
+                String textToTranslate = editTextInput.getText().toString().trim();
+                if (!textToTranslate.isEmpty()) {
+                    translateText(textToTranslate, selectedSourceLanguage, selectedTargetLanguage);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) { }
+        });
     }
 
     // Method to swap the source and target languages
@@ -253,7 +287,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void startVoiceRecognition() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
 
+        // Set language from the source spinner selection using BCP-47 language tag
+        String sourceLanguageCode = LanguageUtils.getLanguageCode(sourceLanguageSpinner.getSelectedItem().toString());
+        Locale sourceLocale = Locale.forLanguageTag(sourceLanguageCode);  // Use BCP-47 tag
+
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, sourceLocale.toLanguageTag()); // Set the language tag directly
+
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(intent, REQUEST_CODE_VOICE);
+        } else {
+            Toast.makeText(this, "Voice recognition not supported on this device", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_VOICE && resultCode == RESULT_OK) {
+            if (data != null) {
+                ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                if (result != null && !result.isEmpty()) {
+                    String recognizedText = result.get(0);
+                    editTextInput.setText(recognizedText);
+
+                    // Translate recognized text using LanguageUtils
+                    String sourceLanguage = sourceLanguageSpinner.getSelectedItem().toString();
+                    String targetLanguage = targetLanguageSpinner.getSelectedItem().toString();
+                    String sourceLangCode = languageCodeMap.get(sourceLanguage);
+                    String targetLangCode = languageCodeMap.get(targetLanguage);
+                    translateText(recognizedText, sourceLangCode, targetLangCode);
+                }
+            }
+        }
+    }
 
     // Method to start the floating window service
     private void startFloatingWindowService() {
