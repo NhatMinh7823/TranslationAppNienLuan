@@ -12,6 +12,7 @@ import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -211,32 +212,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // Map language codes to Azure voice names
-    private String getAzureVoiceFromLanguageCode(String languageCode) {
-        switch (languageCode) {
-            case "en":
-                return "en-US-JennyNeural"; // English
-            case "es":
-                return "es-ES-ElviraNeural"; // Spanish
-            case "fr":
-                return "fr-FR-DeniseNeural"; // French
-            case "de":
-                return "de-DE-KatjaNeural"; // German
-            case "hi":
-                return "hi-IN-SwaraNeural"; // Hindi
-            case "zh":
-                return "zh-CN-XiaoxiaoNeural"; // Chinese
-            case "ja":
-                return "ja-JP-NanamiNeural"; // Japanese
-            case "ru":
-                return "ru-RU-DariyaNeural"; // Russian
-            case "vi":
-                return "vi-VN-HoaiMyNeural"; // Vietnamese
-            case "ko":
-                return "ko-KR-SunHiNeural"; // Korean
-            default:
-                return null;
-        }
-    }
+
 
     // Method to set up the language spinners
     private void setupLanguageSpinners() {
@@ -291,16 +267,13 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
 
-        // Set language from the source spinner selection using BCP-47 language tag
         String sourceLanguageCode = LanguageUtils.getLanguageCode(sourceLanguageSpinner.getSelectedItem().toString());
-        Locale sourceLocale = Locale.forLanguageTag(sourceLanguageCode);  // Use BCP-47 tag
-
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, sourceLocale.toLanguageTag()); // Set the language tag directly
-
+        String sourceLocale = LanguageUtils.getFullLanguageTag(sourceLanguageCode);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, sourceLocale);
         if (intent.resolveActivity(getPackageManager()) != null) {
             startActivityForResult(intent, REQUEST_CODE_VOICE);
-        } else {
-            Toast.makeText(this, "Voice recognition not supported on this device", Toast.LENGTH_SHORT).show();
+        } else{
+            Toast.makeText(this, "Không tìm thấy ứng dụng hỗ trợ giọng nói", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -361,6 +334,32 @@ public class MainActivity extends AppCompatActivity {
         languageCodeMap.put("Russian", "ru");
         languageCodeMap.put("Vietnamese", "vi");
         languageCodeMap.put("Korean", "ko");
+    }
+    private String getAzureVoiceFromLanguageCode(String languageCode) {
+        switch (languageCode) {
+            case "en":
+                return "en-US-JennyNeural"; // English
+            case "es":
+                return "es-ES-ElviraNeural"; // Spanish
+            case "fr":
+                return "fr-FR-DeniseNeural"; // French
+            case "de":
+                return "de-DE-KatjaNeural"; // German
+            case "hi":
+                return "hi-IN-SwaraNeural"; // Hindi
+            case "zh":
+                return "zh-CN-XiaoxiaoNeural"; // Chinese
+            case "ja":
+                return "ja-JP-NanamiNeural"; // Japanese
+            case "ru":
+                return "ru-RU-DariyaNeural"; // Russian
+            case "vi":
+                return "vi-VN-HoaiMyNeural"; // Vietnamese
+            case "ko":
+                return "ko-KR-SunHiNeural"; // Korean
+            default:
+                return null;
+        }
     }
 
     protected void onDestroy() {

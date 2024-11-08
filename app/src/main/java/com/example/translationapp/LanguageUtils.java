@@ -22,6 +22,7 @@ import com.microsoft.cognitiveservices.speech.SpeechSynthesisResult;
 import com.microsoft.cognitiveservices.speech.SpeechSynthesizer;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class LanguageUtils {
@@ -166,5 +167,37 @@ private static void speakTextWithAzure(Context context, String text, String lang
             default:
                 return null;
         }
+    }
+    private static final HashMap<String, String> countryDefaults = new HashMap<>();
+
+    static {
+        countryDefaults.put("en", "US");
+        countryDefaults.put("es", "ES");
+        countryDefaults.put("fr", "FR");
+        countryDefaults.put("de", "DE");
+        countryDefaults.put("hi", "IN");
+        countryDefaults.put("zh", "CN");
+        countryDefaults.put("ja", "JP");
+        countryDefaults.put("ru", "RU");
+        countryDefaults.put("vi", "VN");
+        countryDefaults.put("ko", "KR");
+    }
+
+    public static String getFullLanguageTag(String languageCode) {
+        // Nếu mã ngôn ngữ có mã quốc gia, tạo Locale trực tiếp
+        if (languageCode.contains("-")) {
+            Locale locale = Locale.forLanguageTag(languageCode);
+            return locale.toLanguageTag();
+        }
+
+        // Nếu mã ngôn ngữ không có mã quốc gia, bổ sung mã quốc gia mặc định
+        String country = countryDefaults.get(languageCode);
+        if (country != null) {
+            Locale locale = new Locale(languageCode, country);
+            return locale.toLanguageTag();
+        }
+
+        // Trả về mã ngôn ngữ mà không có mã quốc gia nếu không có dữ liệu bổ sung
+        return languageCode;
     }
 }
